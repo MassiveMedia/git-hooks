@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+
+'''
+Git update hook to protect against unintended submodule bumps.
+
+Checks that commits doing submodule bumps have something like
+'submodule' in their commit message
+'''
+
+import sys
+import subprocess
+import re
+
+
+def execute_command(command, stdin=None, exception_on_failure=True, cwd=None):
+    '''
+    Helper function to run a command and return its exit code, standard output and standard error.
+    '''
+
+    # Handle single string argument
+    if isinstance(command, str):
+        command = command.split()
+
+    # Launch subprocess and collect output.
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, cwd=cwd)
+    stdout, stderr = proc.communicate(stdin)
+    exit_code = proc.returncode
+
+    if exit_code != 0 and exception_on_failure:
+        raise RuntimeError('Command {command!r} failed with code {exit_code}: {stderr!r}'.format(**vars()))
+
+    return exit_code, stdout, stderr
+
+
+def main():
+
+    # Get pushed ref data: ref name (something like 'refs/heads/develop'), current commit sha and pushed commit sha.
+    (ref, current, new) = sys.argv[1:]
+
+    if current == '0000000000000000000000000000000000000000':
+        # Pushing a new branch/tag: compare with master
+        current = 'master'
+
+    if new == '0000000000000000000000000000000000000000':
+        # Removing a ref: nothing to do.
+        return
+
+    # Get submodule paths.
+    command = ['git', 'show', current + ':.gitmodules']
+    exit_code, stdout, stderr = execute_command(command, exception_on_failure=False)
+    if exit_code != 0:
+        # No submodules found
+        return
+    submodule_paths = re.findall(r'path\s*=\s*(.*)', stdout)
+
+    # Check log for commits that touch submodules
+    command = ['git', 'log', '^' + current, new, '--no-merges', '--format=%h:%an:%ae:%s', '--'] + submodule_paths
+    exit_code, stdout, stderr = execute_command(command)
+    for line in stdout.split('\n'):
+        if len(line) > 1:
+            sha, author, email, subject = line.split(':', 3)
+            if 'submodule' not in subject.lower():
+                sys.stderr.write('Commit {sha} by {author} touches a submodule, but does not mention it in the commit message.\n'.format(sha=sha, author=author))
+                sys.exit(1)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception, e:
+        # When this hook fails for some unexpected reason:
+        # inform user, but do not block push.
+        print 'The Submodule Bump Protector git update hook failed with exception "%s".' % repr(e)
