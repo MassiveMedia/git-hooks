@@ -5,6 +5,12 @@ Git update hook to protect against unintended submodule bumps.
 
 Checks that commits doing submodule bumps have something like
 'submodule' in their commit message
+
+
+@author     Stefaan Lippens <stefaan@netlog.com>
+@copyright  2013 Massive Media Match
+@license    http://opensource.org/licenses/MIT
+@link       https://github.com/MassiveMedia/git-hooks
 '''
 
 import sys
