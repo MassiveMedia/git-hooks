@@ -168,3 +168,44 @@ class UpdateSubmoduleBumpProtectorTest(unittest.TestCase):
             self.wc.git('push', 'origin', 'master')
         exception = context.exception
         self.assertRegexpMatches(exception.stderr, 'Commit .* by .* touches a submodule, but does not mention it in the commit message')
+
+
+    def testNewBranchPush(self):
+        self.wc.git('checkout', '-b', 'feature-foo')
+        self.wc.editFile('README.txt', 'starting to work on feature Foo')
+        self.wc.git('commit', '-m', 'first commit on feature-foo')
+        exit_code, stdout, stderr = self.wc.git('push', 'origin', 'feature-foo')
+        self.assertRegexpMatches(stderr, r'\[new branch\]\s+feature-foo')
+        # Check after push
+        exit_code, stdout, stderr = self.other_wc.git('fetch')
+        self.assertRegexpMatches(stderr, r'\[new branch\]\s+feature-foo')
+        self.other_wc.git('checkout', 'origin/feature-foo')
+        data = self.other_wc.getFileContents('README.txt')
+        self.assertEqual('Hello world!\nstarting to work on feature Foo\n', data)
+
+
+    def testDeleteBranchPush(self):
+        #First, create a branch
+        self.wc.git('checkout', '-b', 'feature-bar')
+        self.wc.editFile('README.txt', 'This is experimental feature Bar')
+        self.wc.git('commit', '-m', 'implemented feature-bar')
+        exit_code, stdout, stderr = self.wc.git('push', 'origin', 'feature-bar')
+        self.assertRegexpMatches(stderr, r'\[new branch\]\s+feature-bar')
+        # Check in other wc
+        exit_code, stdout, stderr = self.other_wc.git('fetch')
+        self.assertRegexpMatches(stderr, r'\[new branch\]\s+feature-bar')
+        # Delete branch again
+        exit_code, stdout, stderr = self.wc.git('push', 'origin', ':feature-bar')
+        self.assertRegexpMatches(stderr, r'\[deleted\].*feature-bar')
+        # Check in other wc
+        exit_code, stdout, stderr = self.other_wc.git('fetch', '--prune')
+        self.assertRegexpMatches(stderr, r'\[deleted\]\s+\(none\)\s+->\s+origin/feature-bar')
+
+
+
+# TODO: test pushing a merge without conflict
+# TODO: test pushing a merge with conflict (dragging submodule bump along)
+
+
+if __name__ == '__main__':
+    unittest.main()
