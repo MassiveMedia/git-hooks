@@ -40,6 +40,7 @@ def main():
     if current == '0000000000000000000000000000000000000000':
         # Pushing a new branch/tag: compare with master
         current = 'master'
+        # TODO: eliminate need to hardcode a branch name as fallback here.
 
     if new == '0000000000000000000000000000000000000000':
         # Removing a ref: nothing to do.
@@ -52,6 +53,7 @@ def main():
         # No submodules found
         return
     submodule_paths = re.findall(r'path\s*=\s*(.*)', stdout)
+    # TODO: also check 'new' for submodule paths? (Would partly eliminate the need to fall back on master if 'current' is 00000)
 
     # Check log for commits that touch submodules
     command = ['git', 'log', '^' + current, new, '--no-merges', '--format=%h:%an:%ae:%s', '--'] + submodule_paths
