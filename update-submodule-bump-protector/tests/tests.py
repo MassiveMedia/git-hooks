@@ -79,7 +79,7 @@ class GitRepo():
 class UpdateSubmoduleBumpProtectorTest(unittest.TestCase):
 
     def setUp(self):
-        self.work_root = tempfile.mkdtemp()
+        self.work_root = tempfile.mkdtemp(prefix='githooks-updasubupro-')
 
         # Set up (bare) upstream repo.
         self.upstream = GitRepo(self.get_work_dir('upstream.git'), options=['--bare'])
