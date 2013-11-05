@@ -100,8 +100,8 @@ class UpdateSubmoduleBumpProtectorTest(unittest.TestCase):
         self.wc.git('commit', '-m', 'Added library as submodule')
         self.wc.git('push', 'origin', 'master')
 
-        # Install update hook in upstream repo
-        os.symlink(UPDATE_HOOK, os.path.join(self.upstream.dir, 'hooks', 'update'))
+        # Install update hook in upstream repo (using copy2 to preserve executability)
+        shutil.copy2(UPDATE_HOOK, os.path.join(self.upstream.dir, 'hooks', 'update'))
 
         # Make another working copy
         self.other_wc = GitRepo(self.get_work_dir('other-wc.git'), clone_source=self.upstream)
